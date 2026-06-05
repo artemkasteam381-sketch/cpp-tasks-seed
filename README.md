@@ -38,7 +38,7 @@
    - [плагин CodeLLDB](https://open-vsx.org/extension/vadimcn/vscode-lldb)
    - [плагин Astyle](https://open-vsx.org/extension/haloscript/astyle-lsp-vscode)
 
-### Как пользоваться
+### Как пользоваться.
 
 Просто. Для каждого каталога не забывайте запускать:
 
