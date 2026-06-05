@@ -95,7 +95,7 @@ TEST(Base85, EncodedLengthIsCorrect)
         const std::size_t expected_length = full_blocks * 5 + (tail == 0 ? 0 : tail + 1);
 
         EXPECT_EQ(base85::encode(increasing_bytes(length)).size(), expected_length)
-            << "length = " << length;
+                << "length = " << length;
     }
 }
 

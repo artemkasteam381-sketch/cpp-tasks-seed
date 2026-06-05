@@ -64,7 +64,7 @@ uint32_t read_tail_block(const std::vector<uint8_t>& bytes, std::size_t pos, std
 
 void append_encoded_block(std::vector<uint8_t>& out, uint32_t value, std::size_t count)
 {
-    uint8_t block[5]{};
+    uint8_t block[5] {};
 
     for (int i = 4; i >= 0; --i)
     {
