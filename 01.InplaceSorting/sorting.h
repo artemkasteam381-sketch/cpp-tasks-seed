@@ -10,9 +10,12 @@ template <typename Iterator>
 void bubble_sort(Iterator begin, Iterator end)
 {
     if (begin == end) return;
-    for (auto i = begin; i != std::prev(end); ++i) {
-        for (auto j = begin; j != std::prev(end, std::distance(begin, i) + 1); ++j) {
-            if (*std::next(j) < *j) {
+    for (auto i = begin; i != std::prev(end); ++i)
+    {
+        for (auto j = begin; j != std::prev(end, std::distance(begin, i) + 1); ++j)
+        {
+            if (*std::next(j) < *j)
+            {
                 std::swap(*j, *std::next(j));
             }
         }
@@ -28,8 +31,10 @@ void quick_sort(Iterator begin, Iterator end)
 
     auto pivot = *std::prev(end); // Выбор опорного элемента
     auto i = begin;
-    for (auto j = begin; j != std::prev(end); ++j) {
-        if (*j < pivot) {
+    for (auto j = begin; j != std::prev(end); ++j)
+    {
+        if (*j < pivot)
+        {
             std::swap(*i, *j);
             ++i;
         }

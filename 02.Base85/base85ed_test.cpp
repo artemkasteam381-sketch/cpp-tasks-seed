@@ -38,7 +38,8 @@ struct Case
     std::string encoded;
 };
 
-const std::vector<Case> cases = {
+const std::vector<Case> cases =
+{
     {bytes_from_string(""), ""},
     {bytes_from_string("1"), "F#"},
     {bytes_from_string("12"), "F){"},
