@@ -1,23 +1,17 @@
-include ../Makefile.inc
+CXX = clang++
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic
 
-release : base85
+all: base85 base85ed_test
 
-base85  : base85.r.o base85ed.r.o
-	$(LD) -o $@ $^
+base85: base85.cpp base85ed.cpp base85ed.h
+	$(CXX) $(CXXFLAGS) base85.cpp base85ed.cpp -o base85
 
-debug   : base85.d.o base85ed.d.o
-	$(LD) -o $@ $^
+base85ed_test: base85ed_test.cpp base85ed.cpp base85ed.h
+	$(CXX) $(CXXFLAGS) base85ed_test.cpp base85ed.cpp -o base85ed_test
 
-utest   : base85ed_test.d.o base85ed.d.o
-	$(LD)  -o $@ $^ $(GTEST_LIBS)
-
-run_utest : utest
-	./$^
-
-run_itest : release
-	echo "Integration tests..."
+test: base85ed_test base85
+	./base85ed_test
 	./integration_test.sh
 
-all: depends run_utest run_itest
-
-include Makefile.hdrdep
+clean:
+	rm -f base85 base85ed_test roundtrip.txt numbers.txt
