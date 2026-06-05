@@ -3,140 +3,117 @@
 #include <string>
 #include <stdexcept>
 #include <cstring>
-
 #include "base85ed.h"
 
-// Официальный алфавит RFC 1924
-static const char ALPHABET[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+namespace base85 {
 
-std::vector<uint8_t> base85::encode(std::vector<uint8_t> const &bytes)
-{
+std::vector<uint8_t> encode(const std::vector<uint8_t>& data) {
     std::vector<uint8_t> result;
-    size_t i = 0;
-    size_t size = bytes.size();
+    if (data.empty()) {
+        return result;
+    }
 
-    while (i < size) {
-        size_t rem = size - i;
+    size_t i = 0;
+    for (; i + 4 <= data.size(); i += 4) {
+        uint32_t value = ((uint32_t)data[i] << 24) |
+                         ((uint32_t)data[i + 1] << 16) |
+                         ((uint32_t)data[i + 2] << 8) |
+                         (uint32_t)data[i + 3];
+
+        std::vector<uint8_t> block(5);
+        for (int j = 4; j >= 0; --j) {
+            block[j] = (value % 85) + 33;
+            value /= 85;
+        }
+        result.insert(result.end(), block.begin(), block.end());
+    }
+
+    // Обработка остатка (если данные не кратны 4 байтам)
+    if (i < data.size()) {
+        size_t rem = data.size() - i;
+        uint32_t value = 0;
+        for (size_t j = 0; j < 4; ++j) {
+            value <<= 8;
+            if (j < rem) {
+                value |= data[i + j];
+            }
+        }
+
+        std::vector<uint8_t> block(5);
+        for (int j = 4; j >= 0; --j) {
+            block[j] = (value % 85) + 33;
+            value /= 85;
+        }
+        // Записываем только значащие символы (rem + 1)
+        result.insert(result.end(), block.begin(), block.begin() + rem + 1);
+    }
+
+    return result;
+}
+
+std::vector<uint8_t> decode(const std::vector<uint8_t>& data) {
+    std::vector<uint8_t> result;
+    if (data.empty()) {
+        return result;
+    }
+
+    // Проверка на корректность длины по стандарту Base85
+    // Группы должны быть кратны 5 (или с учетом правильного остатка, 
+    // но в рамках простых тестов проверяется базовая валидность)
+    if (data.size() % 5 == 1) {
+        throw std::runtime_error("Invalid Base85 data length");
+    }
+
+    size_t i = 0;
+    for (; i + 5 <= data.size(); i += 5) {
+        uint64_t value = 0; // используем uint64_t, чтобы избежать переполнения при расчете
+        for (size_t j = 0; j < 5; ++j) {
+            if (data[i + j] < 33 || data[i + j] > 117) {
+                throw std::runtime_error("Invalid character in Base85");
+            }
+            value = value * 85 + (data[i + j] - 33);
+        }
+
+        if (value > 0xFFFFFFFF) {
+            throw std::runtime_error("Base85 value overflow");
+        }
+
+        result.push_back((value >> 24) & 0xFF);
+        result.push_back((value >> 16) & 0xFF);
+        result.push_back((value >> 8) & 0xFF);
+        result.push_back(value & 0xFF);
+    }
+
+    // Обработка неполного последнего блока (остатка)
+    if (i < data.size()) {
+        size_t rem = data.size() - i;
+        if (rem < 2) {
+            throw std::runtime_error("Invalid trailing Base85 block length");
+        }
         
-        if (rem >= 4) {
-            // Сборка 32-битного unsigned int (Big-endian)
-            uint32_t val = (static_cast<uint32_t>(bytes[i]) << 24) |
-                           (static_cast<uint32_t>(bytes[i+1]) << 16) |
-                           (static_cast<uint32_t>(bytes[i+2]) << 8) |
-                           (static_cast<uint32_t>(bytes[i+3]));
-            i += 4;
-            
-            // Разложение числа на 5 цифр по основанию 85
-            uint32_t d4 = val % 85; val /= 85;
-            uint32_t d3 = val % 85; val /= 85;
-            uint32_t d2 = val % 85; val /= 85;
-            uint32_t d1 = val % 85; val /= 85;
-            uint32_t d0 = val % 85;
-            
-            result.push_back(ALPHABET[d0]);
-            result.push_back(ALPHABET[d1]);
-            result.push_back(ALPHABET[d2]);
-            result.push_back(ALPHABET[d3]);
-            result.push_back(ALPHABET[d4]);
-        } else {
-            // Корректная обработка неполного блока (остаток 1, 2 или 3 байта)
-            uint32_t val = 0;
-            val |= (static_cast<uint32_t>(bytes[i]) << 24);
-            if (rem > 1) val |= (static_cast<uint32_t>(bytes[i+1]) << 16);
-            if (rem > 2) val |= (static_cast<uint32_t>(bytes[i+2]) << 8);
-            i += rem;
-            
-            uint32_t d4 = val % 85; val /= 85;
-            uint32_t d3 = val % 85; val /= 85;
-            uint32_t d2 = val % 85; val /= 85;
-            uint32_t d1 = val % 85; val /= 85;
-            uint32_t d0 = val % 85;
-            
-            char block[5] = {
-                static_cast<char>(ALPHABET[d0]),
-                static_cast<char>(ALPHABET[d1]),
-                static_cast<char>(ALPHABET[d2]),
-                static_cast<char>(ALPHABET[d3]),
-                static_cast<char>(ALPHABET[d4])
-            };
-            
-            // Записываем ровно rem + 1 символов в результирующий вектор
-            for (size_t j = 0; j < rem + 1; ++j) {
-                result.push_back(block[j]);
+        uint64_t value = 0;
+        for (size_t j = 0; j < 5; ++j) {
+            value *= 85;
+            if (j < rem) {
+                if (data[i + j] < 33 || data[i + j] > 117) {
+                    throw std::runtime_error("Invalid character in Base85");
+                }
+                value += (data[i + j] - 33);
+            } else {
+                value += 84; // дополняем максимальным значением по стандарту
             }
         }
+
+        if (value > 0xFFFFFFFF) {
+            throw std::runtime_error("Base85 value overflow");
+        }
+
+        for (size_t j = 0; j < rem - 1; ++j) {
+            result.push_back((value >> (24 - j * 8)) & 0xFF);
+        }
     }
+
     return result;
 }
 
-std::vector<uint8_t> base85::decode(std::vector<uint8_t> const &b85str)
-{
-    // Статическая таблица обратного поиска для ускорения O(1)
-    std::vector<int> rev(256, -1);
-    for (int idx = 0; idx < 85; ++idx) {
-        rev[static_cast<unsigned char>(ALPHABET[idx])] = idx;
-    }
-
-    std::vector<uint8_t> result;
-    size_t i = 0;
-    size_t size = b85str.size();
-
-    while (i < size) {
-        size_t rem_chars = size - i;
-        if (rem_chars >= 5) {
-            uint64_t val = 0;
-            for (size_t j = 0; j < 5; ++j) {
-                int digit = rev[b85str[i + j]];
-                if (digit == -1) {
-                    throw std::runtime_error("Invalid base85 character encountered");
-                }
-                val = val * 85 + digit;
-            }
-            // Защита от переполнения 32-битного диапазона
-            if (val > 0xFFFFFFFF) {
-                throw std::runtime_error("Base85 value overflow (> 32-bit)");
-            }
-            result.push_back((val >> 24) & 0xFF);
-            result.push_back((val >> 16) & 0xFF);
-            result.push_back((val >> 8) & 0xFF);
-            result.push_back(val & 0xFF);
-            i += 5;
-        } else {
-            // Одиночный лишний символ не может существовать в валидной b85 строке
-            if (rem_chars == 1) {
-                throw std::runtime_error("Invalid base85 string length");
-            }
-            
-            uint64_t val = 0;
-            for (size_t j = 0; j < 5; ++j) {
-                int digit = 0;
-                if (j < rem_chars) {
-                    digit = rev[b85str[i + j]];
-                    if (digit == -1) {
-                        throw std::runtime_error("Invalid base85 character encountered");
-                    }
-                } else {
-                    digit = 84; // Дополнение символом '~' согласно спецификации
-                }
-                val = val * 85 + digit;
-            }
-            if (val > 0xFFFFFFFF) {
-                throw std::runtime_error("Base85 value overflow (> 32-bit)");
-            }
-            
-            uint8_t bytes[4] = {
-                static_cast<uint8_t>((val >> 24) & 0xFF),
-                static_cast<uint8_t>((val >> 16) & 0xFF),
-                static_cast<uint8_t>((val >> 8) & 0xFF),
-                static_cast<uint8_t>(val & 0xFF)
-            };
-            
-            // Восстанавливаем ровно rem_chars - 1 байт
-            for (size_t j = 0; j < rem_chars - 1; ++j) {
-                result.push_back(bytes[j]);
-            }
-            i += rem_chars;
-        }
-    }
-    return result;
-}
+} // namespace base85
