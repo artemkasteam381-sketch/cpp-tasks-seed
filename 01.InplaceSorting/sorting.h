@@ -5,36 +5,36 @@
 #include <iterator>
 #include "collvalue.h"
 
-// Сортировка пузырьком — O(N^2)[cite: 1, 3]
+// Сортировка пузырьком — O(N^2)
 template <typename Iterator>
 void bubble_sort(Iterator begin, Iterator end)
 {
-    if (begin == end) return;[cite: 1]
+    if (begin == end) return;
     for (auto i = begin; i != std::prev(end); ++i) {
         for (auto j = begin; j != std::prev(end, std::distance(begin, i) + 1); ++j) {
-            if (*std::next(j) < *j) {[cite: 4]
-                std::swap(*j, *std::next(j));[cite: 4]
+            if (*std::next(j) < *j) {
+                std::swap(*j, *std::next(j));
             }
         }
     }
 }
 
-// Быстрая сортировка (QuickSort) — O(N log N)[cite: 1, 3]
+// Быстрая сортировка (QuickSort) — O(N log N)
 template <typename Iterator>
 void quick_sort(Iterator begin, Iterator end)
 {
     auto size = std::distance(begin, end);
-    if (size <= 1) return;[cite: 1]
+    if (size <= 1) return;
 
     auto pivot = *std::prev(end); // Выбор опорного элемента
     auto i = begin;
     for (auto j = begin; j != std::prev(end); ++j) {
-        if (*j < pivot) {[cite: 4]
-            std::swap(*i, *j);[cite: 4]
+        if (*j < pivot) {
+            std::swap(*i, *j);
             ++i;
         }
     }
-    std::swap(*i, *std::prev(end));[cite: 4]
+    std::swap(*i, *std::prev(end));
 
     quick_sort(begin, i);
     quick_sort(std::next(i), end);
