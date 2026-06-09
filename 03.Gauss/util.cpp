@@ -20,7 +20,24 @@ GaussMatrix load_csv_to_matrix(const char *filename)
         }
     }
 
-    return GaussMatrix(rcsv.size(), rcsv.begin()->size());
+    if (rcsv.empty() || rcsv.begin()->empty()) {
+        return GaussMatrix(0, 0);
+    }
+
+    int rows = rcsv.size();
+    int cols = rcsv.begin()->size();
+    GaussMatrix matrix(rows, cols);
+
+    // Заполнение матрицы считанными данными
+    for (int i = 0; i < rows; ++i)
+    {
+        for (int j = 0; j < cols; ++j)
+        {
+            matrix(i, j) = rcsv[i][j];
+        }
+    }
+
+    return matrix;
 }
 
 void print_matrix_as_csv(std::ostream& out, const GaussMatrix &matrix, int prec)
@@ -41,6 +58,6 @@ void print_matrix_as_csv(std::ostream& out, const GaussMatrix &matrix, int prec)
                 out << ',';
             }
         }
-        out << '\n';
+        out << '\\n';
     }
 }
